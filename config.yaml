@@ -1,0 +1,22 @@
+# Cognate / false-friend pipeline config (pilot defaults)
+
+stream_b:
+  similarity_threshold: 0.75
+  max_pairs: 3000
+  length_tolerance: 2  # +/- N characters when blocking
+  translit_cache: data/cache/iso15919.json
+
+pilot:
+  n_a_hi: 10
+  n_a_lo: 7
+  n_b: 15
+  n_random: 8
+  a_sim_threshold: 0.60
+  seed: 7
+
+paths:
+  stream_a: data/candidates/stream_a.csv
+  stream_b: data/candidates/stream_b.csv
+  stream_a_clean: data/candidates/stream_a_clean.csv
+  stream_b_clean: data/candidates/stream_b_clean.csv
+  pilot: data/candidates/pilot.csv
