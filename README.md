@@ -55,6 +55,18 @@ python scripts/make_pilot.py \
 
 ## Pilot annotation
 
+`data/pilot_glossed.csv` is the single source of truth for the 40 pilot pairs
+and their English meanings. After editing it, regenerate the standalone tool:
+
+```bash
+python scripts/build_labeler.py
+```
+
+The `en_kn` and `en_te` values **must faithfully translate the corresponding
+native gloss**. Never disambiguate, improve, or correct a vague or weak source
+gloss; the English must remain equally vague. Flag weak rows for exclusion
+instead of silently fixing their meaning.
+
 1. Each annotator opens `label_pairs.html`, enters their name, and labels all
    40 pairs independently. The interface autosaves locally and deliberately
    hides the candidate stream. Use the exclusion checkbox for malformed pairs.

@@ -93,7 +93,8 @@ def main():
         na, nb = na + "_A", nb + "_B"
     print(f"Annotator A = {na}   Annotator B = {nb}")
 
-    keep = ["pair_id", "kn_word", "te_word", "kn_iso", "te_iso", "gloss", "candidate_source"]
+    keep = ["pair_id", "kn_word", "te_word", "kn_iso", "te_iso",
+            "en_kn", "en_te", "gloss", "candidate_source"]
     keep = [c for c in keep if c in A.columns]
     m = A[keep].merge(
         A[["pair_id", "label", "origin", "notes", "excluded"]],
@@ -125,8 +126,9 @@ def main():
     dis = m[m["agree"] == "NO"]
     print(f"\ndisagreements to adjudicate: {len(dis)}")
     for _, r in dis.iterrows():
-        print(f"  {r['pair_id']}  {r.get('kn_word','')}/{r.get('te_word','')}"
-              f"  [{na}={r[la]} | {nb}={r[lb]}]")
+        print(f"  {r['pair_id']}  {r.get('kn_word','')}/{r.get('te_word','')}")
+        print(f"      KN: {r.get('en_kn','')}  |  TE: {r.get('en_te','')}")
+        print(f"      [{na}={r[la]} | {nb}={r[lb]}]")
     print(f"\nwrote adjudication worksheet -> {args.out}")
     print("Fill in `final_label` (and `final_origin` for cognates) together; that file is your gold set.")
 
