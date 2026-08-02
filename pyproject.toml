@@ -16,6 +16,9 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest"]
+mt = ["deep-translator", "nltk"]
+phonetic = ["lingpy"]
+semantic = ["sentence-transformers"]
 
 [tool.setuptools.packages.find]
 where = ["src"]

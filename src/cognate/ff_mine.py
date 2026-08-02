@@ -20,7 +20,14 @@ from typing import Iterable
 
 import yaml
 
-from cognate import CSV_HEADER
+from cognate.normalize import (
+    DEFAULT_MAX_LEN,
+    clean_word,
+    drop_pairs_in_other,
+    drop_reason,
+    pair_keys,
+    write_clean_csv,
+)
 from cognate.similarity import first_roman_char, normalized_similarity
 
 
@@ -47,6 +54,29 @@ def load_config(path: str | Path) -> dict:
         return yaml.safe_load(f) or {}
 
 
+def clean_lemma_index(
+    index: dict[str, set[str]],
+    glosses: dict[str, str],
+    *,
+    max_len: int = DEFAULT_MAX_LEN,
+) -> tuple[dict[str, set[str]], dict[str, str]]:
+    """
+    Apply the same token filters as normalize.py, merging synsets under the
+    cleaned surface form so Stream B mining runs on final vocabulary.
+    """
+    cleaned: dict[str, set[str]] = defaultdict(set)
+    cleaned_glosses: dict[str, str] = {}
+    for word, sids in index.items():
+        w = clean_word(word)
+        if drop_reason(w, keep_multiword=False, max_len=max_len) is not None:
+            continue
+        cleaned[w] |= set(sids)
+        if w not in cleaned_glosses:
+            # Prefer a gloss attached to the cleaned form, else the raw form.
+            cleaned_glosses[w] = glosses.get(w) or glosses.get(word, "")
+    return dict(cleaned), cleaned_glosses
+
+
 def build_records(
     index: dict[str, set[str]],
     glosses: dict[str, str],
@@ -54,10 +84,15 @@ def build_records(
     cache: dict[str, str],
     *,
     transliterate_fn=None,
+    clean_vocab: bool = True,
+    max_len: int = DEFAULT_MAX_LEN,
 ) -> list[LemmaRecord]:
     """Build lemma records; `transliterate_fn` defaults to cached aksharamukha."""
     if transliterate_fn is None:
         from cognate.transliterate import to_iso_cached as transliterate_fn
+
+    if clean_vocab:
+        index, glosses = clean_lemma_index(index, glosses, max_len=max_len)
 
     records: list[LemmaRecord] = []
     for word, sids in index.items():
@@ -73,6 +108,33 @@ def build_records(
             )
         )
     return records
+
+
+def candidates_to_rows(pairs: list[FFCandidate]) -> list[dict[str, str]]:
+    rows: list[dict[str, str]] = []
+    for i, c in enumerate(pairs):
+        rows.append(
+            {
+                "pair_id": f"B{i:06d}",
+                "kn_word": c.kn_word,
+                "te_word": c.te_word,
+                "kn_iso": c.kn_iso,
+                "te_iso": c.te_iso,
+                "synset_id": "",
+                "gloss": c.gloss,
+                "candidate_source": "form_similar",
+                "label": "",
+                "origin": "",
+                "annotator": "",
+                "notes": "",
+            }
+        )
+    return rows
+
+
+def load_pair_keys_csv(path: str | Path) -> set[tuple[str, str]]:
+    with Path(path).open(newline="", encoding="utf-8") as f:
+        return pair_keys(list(csv.DictReader(f)))
 
 
 def _te_blocks(
@@ -144,29 +206,10 @@ def mine_pairs(
     return kept[:max_pairs]
 
 
-def write_csv(rows: list[FFCandidate], path: str | Path) -> None:
-    path = Path(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w", newline="", encoding="utf-8") as f:
-        w = csv.writer(f)
-        w.writerow(CSV_HEADER)
-        for i, c in enumerate(rows):
-            w.writerow(
-                [
-                    f"B{i:06d}",
-                    c.kn_word,
-                    c.te_word,
-                    c.kn_iso,
-                    c.te_iso,
-                    "",  # synset_id blank for Stream B
-                    c.gloss,
-                    "form_similar",
-                    "",
-                    "",
-                    "",
-                    "",
-                ]
-            )
+def write_csv(rows: list[dict[str, str]] | list[FFCandidate], path: str | Path) -> None:
+    if rows and isinstance(rows[0], FFCandidate):
+        rows = candidates_to_rows(rows)  # type: ignore[arg-type]
+    write_clean_csv(rows, path)  # type: ignore[arg-type]
     print(f"wrote {len(rows):,} rows -> {path}", file=sys.stderr)
 
 
@@ -176,7 +219,10 @@ def run(
     out: str | Path,
     threshold: float | None = None,
     max_pairs: int | None = None,
-) -> list[FFCandidate]:
+    exclude_stream_a: str | Path | None = None,
+    clean_vocab: bool = True,
+    max_len: int = DEFAULT_MAX_LEN,
+) -> list[dict[str, str]]:
     # Heavy deps only needed for the live mining path (not unit-tested filters).
     from cognate.iwn import language_enum, lemma_glosses, lemma_index, load_lang
     from cognate.transliterate import (
@@ -193,6 +239,7 @@ def run(
     cap = int(max_pairs if max_pairs is not None else sb.get("max_pairs", 3000))
     length_tol = int(sb.get("length_tolerance", 2))
     cache_path = sb.get("translit_cache", "data/cache/iso15919.json")
+    max_len = int(sb.get("max_len", max_len))
 
     cache = load_cache(cache_path)
     Language = language_enum()
@@ -210,24 +257,57 @@ def run(
         file=sys.stderr,
     )
 
-    kn_records = build_records(kn_index, kn_glosses, SCRIPT_KANNADA, cache)
-    te_records = build_records(te_index, te_glosses, SCRIPT_TELUGU, cache)
+    kn_records = build_records(
+        kn_index, kn_glosses, SCRIPT_KANNADA, cache,
+        clean_vocab=clean_vocab, max_len=max_len,
+    )
+    te_records = build_records(
+        te_index, te_glosses, SCRIPT_TELUGU, cache,
+        clean_vocab=clean_vocab, max_len=max_len,
+    )
     save_cache(cache, cache_path)
+    print(
+        f"after vocab clean: Kn {len(kn_records):,} | Te {len(te_records):,}",
+        file=sys.stderr,
+    )
     print(f"transliteration cache -> {cache_path} ({len(cache):,} entries)", file=sys.stderr)
 
+    # Mine more than the cap when we will exclude Stream-A overlaps.
+    mine_cap = cap * 3 if exclude_stream_a else cap
     pairs = mine_pairs(
         kn_records,
         te_records,
         threshold=thr,
         length_tolerance=length_tol,
-        max_pairs=cap,
+        max_pairs=mine_cap,
     )
+    rows = candidates_to_rows(pairs)
     print(
-        f"kept {len(pairs):,} pairs (threshold={thr}, max_pairs={cap})",
+        f"mined {len(rows):,} pairs (threshold={thr}, mine_cap={mine_cap})",
         file=sys.stderr,
     )
-    write_csv(pairs, out)
-    return pairs
+
+    if exclude_stream_a:
+        forbidden = load_pair_keys_csv(exclude_stream_a)
+        before = len(rows)
+        rows = drop_pairs_in_other(rows, forbidden)
+        dropped = before - len(rows)
+        for i, row in enumerate(rows):
+            row["pair_id"] = f"B{i:06d}"
+        rows = rows[:cap]
+        print(
+            f"excluded {dropped:,} Stream-A overlaps; "
+            f"kept {len(rows):,} (<= max_pairs={cap})",
+            file=sys.stderr,
+        )
+        leftover = pair_keys(rows) & forbidden
+        if leftover:
+            raise AssertionError(
+                f"clean-A ∩ clean-B still non-empty ({len(leftover)} pairs)"
+            )
+
+    write_csv(rows, out)
+    return rows
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -238,12 +318,26 @@ def main(argv: list[str] | None = None) -> None:
                     help="override stream_b.similarity_threshold")
     ap.add_argument("--max-pairs", type=int, default=None,
                     help="override stream_b.max_pairs")
+    ap.add_argument(
+        "--exclude-stream-a",
+        default=None,
+        help="clean Stream A CSV; drop any (kn,te) that also appear there",
+    )
+    ap.add_argument(
+        "--no-clean-vocab",
+        action="store_true",
+        help="skip normalize-style lemma cleaning (not recommended)",
+    )
+    ap.add_argument("--max-len", type=int, default=DEFAULT_MAX_LEN)
     args = ap.parse_args(argv)
     run(
         config_path=args.config,
         out=args.out,
         threshold=args.threshold,
         max_pairs=args.max_pairs,
+        exclude_stream_a=args.exclude_stream_a,
+        clean_vocab=not args.no_clean_vocab,
+        max_len=args.max_len,
     )
 
 

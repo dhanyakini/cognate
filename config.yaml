@@ -1,10 +1,14 @@
-# Cognate / false-friend pipeline config (pilot defaults)
+# Cognate / false-friend pipeline config
 
 stream_b:
   similarity_threshold: 0.75
   max_pairs: 3000
   length_tolerance: 2  # +/- N characters when blocking
+  max_len: 40          # drop overlong lemmas (same as normalize)
   translit_cache: data/cache/iso15919.json
+
+normalize:
+  max_len: 40
 
 pilot:
   n_a_hi: 10
@@ -14,9 +18,29 @@ pilot:
   a_sim_threshold: 0.60
   seed: 7
 
+batch:
+  n_a_hi: 90
+  n_a_lo: 70
+  n_b: 100
+  n_random: 40
+  a_sim_threshold: 0.60
+  seed: 23
+  overlap_fraction: 0.20
+
+phonetic:
+  cache_path: data/cache/phonetic.json
+
+semantic:
+  cache_path: data/cache/semantic_embeddings.json
+
 paths:
   stream_a: data/candidates/stream_a.csv
   stream_b: data/candidates/stream_b.csv
   stream_a_clean: data/candidates/stream_a_clean.csv
   stream_b_clean: data/candidates/stream_b_clean.csv
+  stream_a_glossed: data/candidates/stream_a_glossed.csv
+  stream_b_glossed: data/candidates/stream_b_glossed.csv
   pilot: data/candidates/pilot.csv
+  pilot_glossed: data/pilot_glossed.csv
+  batch_glossed: data/batch_glossed.csv
+  batch_overlap_ids: data/batch_overlap_ids.txt

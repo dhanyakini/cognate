@@ -20,15 +20,18 @@ Generate Stream A (shared-synset candidates):
 python extract_pairs.py --out data/candidates/stream_a.csv
 ```
 
-Generate Stream B (form-similar candidates with disjoint synsets):
+Generate Stream B (form-similar candidates with disjoint synsets). Prefer
+mining on cleaned vocabulary and excluding clean Stream A overlaps:
 
 ```bash
 python -m cognate.ff_mine \
   --config config.yaml \
+  --exclude-stream-a data/candidates/stream_a_clean.csv \
   --out data/candidates/stream_b.csv
 ```
 
-Normalize both streams:
+Normalize both streams (drops multiword / digits / internal punctuation /
+overlong tokens, then re-transliterates):
 
 ```bash
 python -m cognate.normalize \
@@ -84,5 +87,52 @@ instead of silently fixing their meaning.
 4. Adjudicate disagreements together and fill `final_label` (and
    `final_origin` for cognates). The completed adjudication file is the gold
    pilot.
+
+## Scaling to a ~300-pair batch
+
+1. Re-clean Stream A, then re-mine Stream B on the cleaned vocabulary and drop
+   any remaining A∩B pairs (see commands at the end of this section).
+2. Attach English glosses (WordNet via Hindi/OMW when available; otherwise MT
+   only if `COGNATE_MT=1`, else `needs_gloss=true` — never invent):
+
+   ```bash
+   pip install -e ".[mt]"
+   export COGNATE_MT=1
+   python -c "import nltk; nltk.download('omw-1.4'); nltk.download('wordnet')"
+   python -m cognate.glossing \
+     --in data/candidates/stream_a_clean.csv \
+     --out data/candidates/stream_a_glossed.csv
+   python -m cognate.glossing \
+     --in data/candidates/stream_b_clean.csv \
+     --out data/candidates/stream_b_glossed.csv
+   ```
+
+3. Sample a fresh stratified batch that excludes the pilot:
+
+   ```bash
+   python scripts/make_batch.py \
+     --stream-a data/candidates/stream_a_glossed.csv \
+     --stream-b data/candidates/stream_b_glossed.csv \
+     --exclude data/pilot_glossed.csv \
+     --out data/batch_glossed.csv \
+     --n-a-hi 90 --n-a-lo 70 --n-b 100 --n-random 40 \
+     --a-sim-threshold 0.60 --seed 23
+   ```
+
+   This also writes `data/batch_overlap_ids.txt` (~20% of pair_ids). Both
+   annotators label the overlap; the rest is split. Full-set kappa:
+
+   ```bash
+   python merge_and_kappa.py a.csv b.csv \
+     --overlap-ids data/batch_overlap_ids.txt
+   ```
+
+4. Build the 300-pair labeler (fill any `needs_gloss=true` rows first):
+
+   ```bash
+   python scripts/build_labeler.py \
+     --csv data/batch_glossed.csv \
+     --out label_pairs_batch.html
+   ```
 
 See `annotation_guidelines.md` for label definitions and edge cases.

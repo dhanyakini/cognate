@@ -5,3 +5,12 @@ from cognate.features.orthographic import (  # noqa: F401
     levenshtein,
     normalized_similarity,
 )
+from cognate.features.phonetic import (  # noqa: F401
+    nw_similarity,
+    phonetic_similarity,
+    sca_similarity,
+)
+from cognate.features.semantic import (  # noqa: F401
+    get_encoder,
+    semantic_similarity,
+)

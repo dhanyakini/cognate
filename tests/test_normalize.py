@@ -128,3 +128,34 @@ def test_normalize_stream_b_renames_gloss(tmp_path: Path) -> None:
     assert cleaned[0]["gloss"] == "kn: ಹಕ್ಕಿ || te: పక్షి"
     assert cleaned[0]["synset_id"] == ""
     assert cleaned[0]["kn_iso"] != "old"
+
+
+def test_normalize_drops_internal_punct_and_overlong(tmp_path: Path) -> None:
+    rows = [
+        _raw("ನೀ.ರು", "నీరు"),  # internal period
+        _raw("ನೀರು", 'నీ"రు'),  # embedded quote
+        _raw("ನೀರು", "నీరు" + "x" * 50),  # overlong te
+        _raw("ನೀರು", "నీరు"),  # keep
+    ]
+    cfg = NormalizeConfig(
+        keep_multiword=False,
+        max_len=40,
+        translit_cache_path=str(tmp_path / "cache.json"),
+        te_gloss_by_id={"1": "తెలుగు"},
+    )
+    cleaned, stats = normalize_rows(rows, "a", cfg)
+    assert len(cleaned) == 1
+    assert cleaned[0]["kn_word"] == "ನೀರು"
+    assert stats.dropped_internal_punct >= 2
+    assert stats.dropped_overlong >= 1
+
+
+def test_streams_disjoint_helper() -> None:
+    from cognate.normalize import assert_streams_disjoint, drop_pairs_in_other, pair_keys
+
+    a = [{"kn_word": "ನೀರು", "te_word": "నీరు"}, {"kn_word": "ಮನೆ", "te_word": "ఇల్లు"}]
+    b = [{"kn_word": "ನೀರು", "te_word": "నీరు"}, {"kn_word": "ಕಾಗೆ", "te_word": "కాకి"}]
+    filtered = drop_pairs_in_other(b, pair_keys(a))
+    assert_streams_disjoint(a, filtered)
+    assert len(filtered) == 1
+    assert filtered[0]["kn_word"] == "ಕಾಗೆ"

@@ -6,12 +6,20 @@ Run after both people export from the labeling tool:
     python merge_and_kappa.py pilot_labeled_dhanya.csv pilot_labeled_tejaswini.csv
     python merge_and_kappa.py a.csv b.csv --out pilot_adjudication.csv
 
+For the full-set kappa (double-labeled overlap only):
+    python merge_and_kappa.py a.csv b.csv --overlap-ids data/batch_overlap_ids.txt
+
 It prints percent agreement, Cohen's kappa (with and without 'uncertain'),
 and a confusion matrix, then writes an adjudication worksheet: both labels
 side by side, an `agree` flag, and blank `final_label` / `final_origin`
 columns for you to fill in together. That filled worksheet becomes your gold set.
 """
-import argparse, sys
+from __future__ import annotations
+
+import argparse
+import sys
+from pathlib import Path
+
 import pandas as pd
 
 LABELS = ["cognate", "false_friend", "unrelated", "uncertain"]
@@ -22,6 +30,11 @@ def load(path):
     if "pair_id" not in df.columns or "label" not in df.columns:
         sys.exit(f"{path}: expected columns pair_id and label")
     return df
+
+
+def load_overlap_ids(path: str | Path) -> set[str]:
+    text = Path(path).read_text(encoding="utf-8")
+    return {line.strip() for line in text.splitlines() if line.strip()}
 
 
 def annot_name(df, fallback):
@@ -72,19 +85,28 @@ def report(a, b, labels, title):
 def kappa_reading(k):
     if k != k:
         return "n/a"
-    if k < 0.20: return "slight"
-    if k < 0.40: return "fair"
-    if k < 0.60: return "moderate"
-    if k < 0.80: return "substantial"
+    if k < 0.20:
+        return "slight"
+    if k < 0.40:
+        return "fair"
+    if k < 0.60:
+        return "moderate"
+    if k < 0.80:
+        return "substantial"
     return "almost perfect"
 
 
-def main():
+def main(argv: list[str] | None = None):
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("file_a")
     ap.add_argument("file_b")
     ap.add_argument("--out", default="pilot_adjudication.csv")
-    args = ap.parse_args()
+    ap.add_argument(
+        "--overlap-ids",
+        default=None,
+        help="optional file of pair_ids; kappa is computed on this subset only",
+    )
+    args = ap.parse_args(argv)
 
     A, B = load(args.file_a), load(args.file_b)
     na = annot_name(A, "A")
@@ -102,6 +124,12 @@ def main():
         B[["pair_id", "label", "origin", "notes", "excluded"]],
         on="pair_id", suffixes=("_"+na, "_"+nb))
 
+    if args.overlap_ids:
+        ids = load_overlap_ids(args.overlap_ids)
+        before = len(m)
+        m = m[m["pair_id"].isin(ids)].copy()
+        print(f"overlap filter: {len(m)}/{before} rows (ids file has {len(ids)})")
+
     total = len(m)
     la, lb = "label_"+na, "label_"+nb
     ea, eb = "excluded_"+na, "excluded_"+nb
@@ -113,7 +141,10 @@ def main():
     print(f"\nrows merged: {total} | comparable: {len(comparable)} | "
           f"excluded by someone: {len(excluded)} | unlabeled by someone: {len(unlabeled)}")
 
-    report(list(comparable[la]), list(comparable[lb]), LABELS, "ALL FOUR LABELS")
+    title = "ALL FOUR LABELS"
+    if args.overlap_ids:
+        title += " (OVERLAP ONLY)"
+    report(list(comparable[la]), list(comparable[lb]), LABELS, title)
     no_unc = comparable[(comparable[la] != "uncertain") & (comparable[lb] != "uncertain")]
     report(list(no_unc[la]), list(no_unc[lb]),
            ["cognate", "false_friend", "unrelated"], "EXCLUDING 'uncertain'")

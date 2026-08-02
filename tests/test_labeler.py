@@ -139,3 +139,48 @@ def test_kappa_disagreement_output_includes_english_meanings(
         output = list(csv.DictReader(file))
     assert output[0]["en_kn"] == rows_a[0]["en_kn"]
     assert output[0]["en_te"] == rows_a[0]["en_te"]
+
+
+def test_kappa_overlap_ids_restricts_comparable_set(tmp_path: Path) -> None:
+    rows_a = _read(GLOSSED)
+    rows_b = [dict(row) for row in rows_a]
+    for rows, annotator in ((rows_a, "dhanya"), (rows_b, "tejaswini")):
+        for row in rows:
+            row["label"] = "cognate"
+            row["origin"] = ""
+            row["annotator"] = annotator
+            row["notes"] = ""
+            row["excluded"] = ""
+    rows_b[1]["label"] = "false_friend"  # disagreement outside overlap
+    rows_b[0]["label"] = "cognate"
+
+    file_a = tmp_path / "a.csv"
+    file_b = tmp_path / "b.csv"
+    adjudication = tmp_path / "adjudication.csv"
+    overlap = tmp_path / "overlap.txt"
+    # Only the first pair is in the overlap set.
+    overlap.write_text(rows_a[0]["pair_id"] + "\n", encoding="utf-8")
+    _write(file_a, rows_a)
+    _write(file_b, rows_b)
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "merge_and_kappa.py"),
+            str(file_a),
+            str(file_b),
+            "--out",
+            str(adjudication),
+            "--overlap-ids",
+            str(overlap),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    assert "OVERLAP ONLY" in result.stdout
+    assert "comparable: 1" in result.stdout
+    with adjudication.open(newline="", encoding="utf-8") as file:
+        output = list(csv.DictReader(file))
+    assert len(output) == 1
+    assert output[0]["pair_id"] == rows_a[0]["pair_id"]
