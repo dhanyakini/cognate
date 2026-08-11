@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pair Labeling — Project 110</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,900&family=IBM+Plex+Mono:wght@400;500&family=Noto+Sans+Kannada:wght@400;600&family=Noto+Sans+Telugu:wght@400;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#eef0f2; --bg:#e7eaec; --card:#fbfbf9; --ink:#1b2430; --ink-soft:#5a6675;
+    --line:#d5dade; --kn:#5b4b8a; --kn-tint:#efe9f7; --te:#12776b; --te-tint:#e2f1ee;
+    --cog:#2e7d5b; --ff:#b06a17; --unrel:#5c6773; --unc:#8a8578; --focus:#1b2430; --radius:14px;
+  }
+  *{box-sizing:border-box} html,body{margin:0}
+  body{background:var(--bg); color:var(--ink); font-family:'Inter',system-ui,-apple-system,sans-serif;
+    line-height:1.5; -webkit-font-smoothing:antialiased; display:flex; justify-content:center; padding:24px 16px 64px}
+  .wrap{width:100%; max-width:760px}
+  header{display:flex; align-items:baseline; justify-content:space-between; gap:16px; margin-bottom:6px; flex-wrap:wrap}
+  .brand{font-family:'Fraunces',serif; font-weight:900; font-size:1.35rem; letter-spacing:-.01em}
+  .brand .no{color:var(--kn)}
+  .who{font-size:.85rem; color:var(--ink-soft)} .who b{color:var(--ink)}
+  .sub{font-size:.8rem; color:var(--ink-soft); margin:0 0 18px}
+  .pbar{height:6px; background:var(--line); border-radius:99px; overflow:hidden; margin:14px 0 6px}
+  .pfill{height:100%; width:0; background:linear-gradient(90deg,var(--kn),var(--te)); transition:width .25s ease}
+  .pmeta{display:flex; justify-content:space-between; font-size:.78rem; color:var(--ink-soft); margin-bottom:16px}
+  .dots{display:flex; flex-wrap:wrap; gap:4px; margin-bottom:20px}
+  .dot{width:14px; height:14px; border-radius:4px; background:var(--line); cursor:pointer; border:none; padding:0; transition:transform .1s}
+  .dot:hover{transform:scale(1.25)} .dot.done{background:var(--ink)}
+  .dot.excl{background:repeating-linear-gradient(45deg,var(--unrel),var(--unrel) 2px,transparent 2px,transparent 4px)}
+  .dot.cur{outline:2px solid var(--kn); outline-offset:1px}
+  .card{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); overflow:hidden;
+    box-shadow:0 1px 2px rgba(27,36,48,.04),0 8px 24px rgba(27,36,48,.05)}
+  .panels{display:grid; grid-template-columns:1fr 1fr; position:relative}
+  .panel{padding:24px 24px 22px}
+  .panel.kn{background:linear-gradient(180deg,var(--kn-tint),transparent 55%)}
+  .panel.te{background:linear-gradient(180deg,var(--te-tint),transparent 55%)}
+  .divider{position:absolute; left:50%; top:18px; bottom:18px; width:1px; background:var(--line); transform:translateX(-.5px)}
+  .compare{position:absolute; left:50%; top:44px; transform:translateX(-50%);
+    background:var(--card); border:1px solid var(--line); border-radius:99px; width:28px; height:28px;
+    display:flex; align-items:center; justify-content:center; font-family:'Fraunces',serif; color:var(--ink-soft)}
+  .lang{font-size:.72rem; text-transform:uppercase; letter-spacing:.12em; font-weight:600; margin-bottom:8px}
+  .kn .lang{color:var(--kn)} .te .lang{color:var(--te)}
+  .word{font-size:2rem; line-height:1.2; word-break:break-word; margin-bottom:3px}
+  .kn .word{font-family:'Noto Sans Kannada',sans-serif}
+  .te .word{font-family:'Noto Sans Telugu',sans-serif}
+  .iso{font-family:'IBM Plex Mono',monospace; font-size:.92rem; color:var(--ink-soft); margin-bottom:12px; word-break:break-word}
+  .engloss{font-size:1rem; font-weight:600; color:var(--ink); border-top:1px solid var(--line); padding-top:11px; margin-bottom:7px}
+  .natgloss{font-size:.79rem; color:var(--ink-soft); line-height:1.45}
+  .natgloss .tag{font-family:'IBM Plex Mono',monospace; font-size:.6rem; letter-spacing:.06em; border:1px solid var(--line);
+    border-radius:3px; padding:0 4px; margin-right:6px; vertical-align:1px}
+  .controls{padding:20px 24px 24px; border-top:1px solid var(--line)}
+  .qlabel{font-size:.82rem; color:var(--ink-soft); margin-bottom:10px}
+  .labels{display:grid; grid-template-columns:repeat(4,1fr); gap:8px}
+  .lbtn{appearance:none; border:1.5px solid var(--line); background:#fff; color:var(--ink); border-radius:10px;
+    padding:12px 8px; cursor:pointer; font:inherit; font-weight:500; text-align:center; transition:border-color .12s,background .12s}
+  .lbtn .k{display:block; font-family:'IBM Plex Mono',monospace; font-size:.7rem; color:var(--ink-soft); margin-bottom:3px}
+  .lbtn:hover{border-color:var(--ink-soft)} .lbtn:focus-visible{outline:2px solid var(--focus); outline-offset:2px}
+  .lbtn[data-l="cognate"].on{border-color:var(--cog); background:color-mix(in srgb,var(--cog) 10%,#fff)}
+  .lbtn[data-l="false_friend"].on{border-color:var(--ff); background:color-mix(in srgb,var(--ff) 12%,#fff)}
+  .lbtn[data-l="unrelated"].on{border-color:var(--unrel); background:color-mix(in srgb,var(--unrel) 12%,#fff)}
+  .lbtn[data-l="uncertain"].on{border-color:var(--unc); background:color-mix(in srgb,var(--unc) 14%,#fff)}
+  .extra{margin-top:16px; display:flex; flex-direction:column; gap:12px}
+  .origin{display:none; align-items:center; gap:8px; flex-wrap:wrap} .origin.show{display:flex}
+  .origin .tag{font-size:.78rem; color:var(--ink-soft); margin-right:2px}
+  .obtn{border:1px solid var(--line); background:#fff; border-radius:99px; padding:5px 12px; font:inherit; font-size:.82rem; cursor:pointer; color:var(--ink-soft)}
+  .obtn.on{border-color:var(--cog); color:var(--cog); background:color-mix(in srgb,var(--cog) 8%,#fff)}
+  .obtn:focus-visible{outline:2px solid var(--focus); outline-offset:2px}
+  .row{display:flex; gap:12px; align-items:center; flex-wrap:wrap}
+  input[type=text].notes{flex:1; min-width:180px; border:1px solid var(--line); border-radius:8px; padding:9px 11px; font:inherit; font-size:.88rem; background:#fff; color:var(--ink)}
+  input.notes:focus-visible{outline:2px solid var(--focus); outline-offset:1px; border-color:var(--ink-soft)}
+  label.excl{display:inline-flex; align-items:center; gap:7px; font-size:.83rem; color:var(--ink-soft); cursor:pointer; user-select:none}
+  label.excl input{width:16px; height:16px; accent-color:var(--unrel)}
+  .nav{display:flex; justify-content:space-between; align-items:center; margin-top:18px; gap:12px}
+  .nbtn{border:1px solid var(--line); background:#fff; border-radius:10px; padding:10px 18px; font:inherit; font-weight:500; cursor:pointer; color:var(--ink)}
+  .nbtn:hover:not(:disabled){border-color:var(--ink-soft)} .nbtn:disabled{opacity:.4; cursor:default}
+  .nbtn.primary{background:var(--ink); color:#fff; border-color:var(--ink)}
+  .nbtn:focus-visible{outline:2px solid var(--focus); outline-offset:2px}
+  .foot{display:flex; gap:10px; align-items:center; margin-top:26px; flex-wrap:wrap}
+  .foot .grow{flex:1} .save-note{font-size:.76rem; color:var(--ink-soft)}
+  .ghost{background:none; border:none; color:var(--ink-soft); text-decoration:underline; cursor:pointer; font:inherit; font-size:.82rem}
+  .export{border:1px solid var(--te); background:color-mix(in srgb,var(--te) 8%,#fff); color:var(--te); border-radius:10px; padding:10px 18px; font:inherit; font-weight:600; cursor:pointer}
+  .export:focus-visible{outline:2px solid var(--focus); outline-offset:2px}
+  .help{font-size:.83rem; color:var(--ink-soft); background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px 16px; margin-bottom:18px}
+  .help b{color:var(--ink)}
+  .help .k{font-family:'IBM Plex Mono',monospace; background:var(--paper); border:1px solid var(--line); border-radius:4px; padding:0 5px; color:var(--ink)}
+  details summary{cursor:pointer; font-size:.83rem; color:var(--ink-soft); margin-bottom:14px}
+  .overlay{position:fixed; inset:0; background:rgba(231,234,236,.85); backdrop-filter:blur(3px); display:flex; align-items:center; justify-content:center; padding:20px; z-index:20}
+  .modal{background:var(--card); border:1px solid var(--line); border-radius:18px; padding:30px 28px; max-width:440px; width:100%; box-shadow:0 20px 60px rgba(27,36,48,.15)}
+  .modal h1{font-family:'Fraunces',serif; font-size:1.5rem; margin:0 0 6px}
+  .modal p{font-size:.9rem; color:var(--ink-soft); margin:0 0 18px}
+  .modal label{display:block; font-size:.8rem; color:var(--ink-soft); margin-bottom:6px}
+  .modal input{width:100%; border:1px solid var(--line); border-radius:10px; padding:11px 13px; font:inherit; font-size:1rem; margin-bottom:8px}
+  .modal input:focus-visible{outline:2px solid var(--focus); outline-offset:1px}
+  .resume{font-size:.82rem; color:var(--cog); margin:0 0 16px; min-height:1.1em}
+  .modal .start{width:100%; background:var(--ink); color:#fff; border:none; border-radius:10px; padding:12px; font:inherit; font-weight:600; font-size:1rem; cursor:pointer}
+  .csvbox{width:100%; height:130px; margin-top:12px; font-family:'IBM Plex Mono',monospace; font-size:.72rem; border:1px solid var(--line); border-radius:8px; padding:10px; display:none; white-space:pre; background:var(--paper)}
+  .done-banner{background:color-mix(in srgb,var(--cog) 10%,#fff); border:1px solid var(--cog); color:var(--cog); border-radius:10px; padding:12px 14px; font-size:.88rem; font-weight:500; margin-bottom:16px; display:none}
+  .done-banner.show{display:block}
+  @media(max-width:560px){
+    .panels{grid-template-columns:1fr} .divider,.compare{display:none}
+    .panel.te{border-top:1px solid var(--line)} .labels{grid-template-columns:1fr 1fr} .word{font-size:1.7rem}
+  }
+  @media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">Project&nbsp;<span class="no">110</span> · Pair Labeling</div>
+    <div class="who">Annotator: <b id="whoName">—</b> · <span class="ghost" id="switchBtn">switch</span></div>
+  </header>
+  <p class="sub">Cognate &amp; false-friend detection · Kannada ⇄ Telugu · pilot set (40 pairs)</p>
+  <div class="done-banner" id="doneBanner">All 40 labeled. Export your file below, then run both files through the kappa script.</div>
+  <details>
+    <summary>How to judge &amp; keyboard shortcuts</summary>
+    <div class="help">
+      Read the <b>English meaning</b> of both words to compare sense; read the <b>transliteration</b> to compare form. (The native definition under each is for whoever reads that script — optional.)<br>
+      <b>Cognate</b> — shared origin <em>and</em> shared meaning (includes shared Sanskrit words).<br>
+      <b>False friend</b> — looks/sounds alike but the meanings differ.<br>
+      <b>Unrelated</b> — neither related in origin nor confusable in form.<br>
+      <b>Uncertain</b> — can't decide; fine during the pilot.<br>
+      Keys: <span class="k">1</span> cognate · <span class="k">2</span> false friend · <span class="k">3</span> unrelated · <span class="k">4</span> uncertain · <span class="k">→</span>/<span class="k">Enter</span> next · <span class="k">←</span> back.
+    </div>
+  </details>
+  <div class="pbar"><div class="pfill" id="pfill"></div></div>
+  <div class="pmeta"><span id="pcount">0 / 40 labeled</span><span id="pidx">Pair 1 of 40</span></div>
+  <div class="dots" id="dots"></div>
+  <div class="card">
+    <div class="panels">
+      <div class="panel kn">
+        <div class="lang">Kannada</div>
+        <div class="word" id="knWord"></div>
+        <div class="iso" id="knIso"></div>
+        <div class="engloss" id="knEn"></div>
+        <div class="natgloss" id="knGloss"></div>
+      </div>
+      <div class="divider"></div>
+      <div class="compare">≟</div>
+      <div class="panel te">
+        <div class="lang">Telugu</div>
+        <div class="word" id="teWord"></div>
+        <div class="iso" id="teIso"></div>
+        <div class="engloss" id="teEn"></div>
+        <div class="natgloss" id="teGloss"></div>
+      </div>
+    </div>
+    <div class="controls">
+      <div class="qlabel">How is this pair related?</div>
+      <div class="labels" id="labels">
+        <button class="lbtn" data-l="cognate"><span class="k">1</span>Cognate</button>
+        <button class="lbtn" data-l="false_friend"><span class="k">2</span>False friend</button>
+        <button class="lbtn" data-l="unrelated"><span class="k">3</span>Unrelated</button>
+        <button class="lbtn" data-l="uncertain"><span class="k">4</span>Uncertain</button>
+      </div>
+      <div class="extra">
+        <div class="origin" id="origin">
+          <span class="tag">Origin (optional):</span>
+          <button class="obtn" data-o="inherited">inherited Dravidian</button>
+          <button class="obtn" data-o="sanskrit">shared Sanskrit</button>
+          <button class="obtn" data-o="other_borrowing">other borrowing</button>
+          <button class="obtn" data-o="uncertain">uncertain</button>
+        </div>
+        <div class="row">
+          <input type="text" class="notes" id="notes" placeholder="Notes (optional) — e.g. partial false friend, garbled word…">
+          <label class="excl"><input type="checkbox" id="excl"> Not a valid pair — exclude</label>
+        </div>
+      </div>
+      <div class="nav">
+        <button class="nbtn" id="prev">← Back</button>
+        <button class="nbtn primary" id="next">Next →</button>
+      </div>
+    </div>
+  </div>
+  <div class="foot">
+    <button class="export" id="exportBtn">Export my labels (CSV)</button>
+    <span class="save-note" id="saveNote">Progress autosaves</span>
+    <span class="grow"></span>
+    <button class="ghost" id="showCsv">show CSV to copy</button>
+    <button class="ghost" id="reset">reset my labels</button>
+  </div>
+  <textarea class="csvbox" id="csvbox" readonly></textarea>
+</div>
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <h1>Who's labeling?</h1>
+    <p>Enter your name. Each person labels independently — don't compare until both are done. Your work saves under your name and you can resume anytime.</p>
+    <label for="nameIn">Your name</label>
+    <input type="text" id="nameIn" placeholder="e.g. Dhanya" autocomplete="off">
+    <p class="resume" id="resumeMsg"></p>
+    <button class="start" id="startBtn">Start labeling</button>
+  </div>
+</div>
+<script>
+const PAIRS = [{"pair_id":"P000000","kn_word":"ತರಿ","te_word":"తరి","kn_iso":"tari","te_iso":"tari","gloss":"kn: ಮರ, ಕಲ್ಲು ಗಟ್ಟಿಯಾದ ರಬ್ಬರ್ ವಸ್ತುಇತ್ಯಾದಿ ಗಟ್ಟಿ ವಸ್ತುಗಳನ್ನು ಉಳಿ ಇತ್ಯಾದಿ ಉಪಕರಣಗಳ ಸಹಾಯದಿಂದ ಅದರ ಮೇಲ್ಮೈಯನ್ನು ಒರಟುಗೊಳಿಸುವ ಪ್ರಕ್ರಿಯೆ || te: నీళ్ళలో ప్రయాణం చేస్తూ కొయ్యలను, లోహాలను సరఫరా చేసేవి","candidate_source":"form_similar","en_kn":"to chisel / roughen a hard surface","en_te":"a boat/vessel that ferries wood & metal by water"},{"pair_id":"P000001","kn_word":"ಮೆತ್ತೆ","te_word":"ఔష్ఠ్యాలు","kn_iso":"mette","te_iso":"auṣṭhyālu","gloss":"","candidate_source":"random","en_kn":"mattress / cushion","en_te":"labials (lip speech-sounds)"},{"pair_id":"P000002","kn_word":"ಸಾಧನ","te_word":"సాధనం","kn_iso":"sādhana","te_iso":"sādhanaṁ","gloss":"kn: ಯಾವುದಾದರು ಕೆಲಸಗಳಿಗೆ ಉಪಯೋಗವಾಗುವ ಸಾಮರ್ಥ್ಯವಿರುವ ವಸ್ತು || te: ఏదైన పనికి ఉపయోగించే పనిముట్టు.","candidate_source":"shared_synset","en_kn":"tool / instrument / means","en_te":"tool / instrument (for any task)"},{"pair_id":"P000003","kn_word":"ತಂದ್ರಿ","te_word":"తంత్రి","kn_iso":"taṁdri","te_iso":"taṁtri","gloss":"kn: ಪ್ರಾಣಿಗಳ ಆ ಸ್ಥಿತಿ ಅದರಿಂದ ಎಚ್ಚರ ಹೊಂದುವುದರ ಹಿಂದೆ ಕೆಲವು ಸಮಯಗಳವರೆಗೆ ಯಾವುದೇ ಕೆಲಸವಿಲ್ಲದೆ ವಿಶ್ರಾಂತಿ ಹೊಂದುವಂತಹದ್ದು ಮತ್ತು ಅವರಿಗೆ ಶಾರೀರಿಕವಾಗಿ ಹಾಗೂ ಮಾನಸಿಕವಾಗಿ ವಿಶ್ರಾಂತಿ ಲಭಿಸುತ್ತದೆ || te: సితార్ యొక్క తీగలాగా ఉండేది","candidate_source":"form_similar","en_kn":"drowsiness / lethargy","en_te":"string of an instrument (e.g. sitar)"},{"pair_id":"P000004","kn_word":"ಗುಣಗಾನ","te_word":"ఇరికించు","kn_iso":"guṇagāna","te_iso":"irikiṁcu","gloss":"","candidate_source":"random","en_kn":"singing someone's praises; eulogy","en_te":"to squeeze in / insert / trap"},{"pair_id":"P000005","kn_word":"ಅಲುಗಿಸಿದಂತಹ","te_word":"మామిడివిత్తు","kn_iso":"alugisidaṁtaha","te_iso":"māmiḍivittu","gloss":"","candidate_source":"random","en_kn":"shaken / moved (adjectival)","en_te":"mango seed / stone"},{"pair_id":"P000006","kn_word":"ಪರೋಪಕಾರ","te_word":"పరోపకారము","kn_iso":"parōpakāra","te_iso":"parōpakāramu","gloss":"kn: ಬೇರೆಯವರಿಗೆ ಮಾಡುವ ಉಪಕಾರ ಅಥವಾ ನೆರವು || te: ఇతరులకు మంచిని చేసే కార్యము లేక భావము","candidate_source":"form_similar","en_kn":"benevolence; helping others","en_te":"benevolence; doing good to others"},{"pair_id":"P000007","kn_word":"ಮೈಲಿ","te_word":"మైలు","kn_iso":"maili","te_iso":"mailu","gloss":"kn: ದೂರವನ್ನು ಅಳೆಯುವ ಒಂದು ಮಾನ || te: ఐదువేల రెండు వందల ఎనవై అడుగుల దూరం","candidate_source":"shared_synset","en_kn":"mile (unit of distance)","en_te":"mile (5,280 feet)"},{"pair_id":"P000008","kn_word":"ನಿರುಪಯುಕ್ತ","te_word":"నిరుపయోగం","kn_iso":"nirupayukta","te_iso":"nirupayōgaṁ","gloss":"kn: ಉಪಯೋಗದ ಕೊರೆತೆ ಇರುವುದು || te: ప్రయోజనం లేనిది","candidate_source":"shared_synset","en_kn":"useless / lacking use","en_te":"useless; of no use"},{"pair_id":"P000009","kn_word":"ಯಶಸ್ಸು-ಕಾಣದಂತ","te_word":"పేరులేని","kn_iso":"yaśassu-kāṇadaṁta","te_iso":"pērulēni","gloss":"kn: ಯಾರಿಗೆ ಒಳ್ಳೆಯ ಕೆಲಸವನ್ನು ಮಾಡಿದ್ದರೂ ಯಶಸ್ಸು ಸಿಗುವುದಿಲ್ಲವೋ || te: అతనికి మంచి పనులు చేసినా మంచిపేరు దొరకలేదు","candidate_source":"shared_synset","en_kn":"gaining no success despite good work","en_te":"without a (good) name / renown"},{"pair_id":"P000010","kn_word":"ಕಲ್ಪನಾತೀತವಾದಂತ","te_word":"టెంకాయచెట్లు","kn_iso":"kalpanātītavādaṁta","te_iso":"ṭeṁkāyaceṭlu","gloss":"","candidate_source":"random","en_kn":"beyond imagination; unimaginable","en_te":"coconut trees"},{"pair_id":"P000011","kn_word":"ತಲಬು","te_word":"తలపు","kn_iso":"talabu","te_iso":"talapu","gloss":"kn: ನೌಕರಿಗೆ ದೊರೆಯುವಂತಹ ಸಂಬಳ || te: యోచించేటటువంటి భావన.","candidate_source":"form_similar","en_kn":"salary / wages","en_te":"a thought / intention"},{"pair_id":"P000012","kn_word":"ಚಿಬುಕ","te_word":"చిలుక","kn_iso":"cibuka","te_iso":"ciluka","gloss":"kn: ಗದ್ದದ ಅಥವಾ ಗದ್ದಕ್ಕೆ ಸಂಬಂಧಿಸಿದಂತಹ || te: జ్యోష్యం చెప్పడానికి ఉపయోగించుకునే పక్షి","candidate_source":"form_similar","en_kn":"chin","en_te":"parrot (used in fortune-telling)"},{"pair_id":"P000013","kn_word":"ಗಡಿಯಾ","te_word":"గడియ","kn_iso":"gaḍiyā","te_iso":"gaḍiya","gloss":"kn: ಸೀಮೆ ಅಥವಾ ಗಡಿಗೆ ಸಂಬಂಧಿಸಿದ || te: ఏదైనా ఒక పని చేయుటకు ఇచ్చు సమయం.","candidate_source":"form_similar","en_kn":"of a border / boundary","en_te":"a moment; a unit of time (ghadiya)"},{"pair_id":"P000014","kn_word":"ಹಾವು","te_word":"వ్యాప్తి","kn_iso":"hāvu","te_iso":"vyāpti","gloss":"","candidate_source":"random","en_kn":"snake","en_te":"spread / extent / pervasion"},{"pair_id":"P000015","kn_word":"ಯಾತ್ರಿ","te_word":"భాటసారి","kn_iso":"yātri","te_iso":"bhāṭasāri","gloss":"kn: ಯಾತ್ರೆಯನ್ನು ಕೈಗೊಂಡವ ಅಥವಾ ಯಾವುದೇ ಕ್ಷೇತ್ರಗಳನ್ನು ನೋಡಲು ಬಂದವರು || te: ఎవ్వరైతే యాత్రలు చేస్తారో.","candidate_source":"shared_synset","en_kn":"traveller / pilgrim","en_te":"traveller / wayfarer"},{"pair_id":"P000016","kn_word":"ತಾಮಸ","te_word":"తామసి","kn_iso":"tāmasa","te_iso":"tāmasi","gloss":"kn: ಬೆಳಕಿನ ಅಭಾವ || te: శివుడి యొక్క భార్య","candidate_source":"form_similar","en_kn":"darkness; absence of light","en_te":"Shiva's wife"},{"pair_id":"P000017","kn_word":"ಜ್ವಾಲಾಮುಖಿ-ಪರ್ವತ","te_word":"జ్వాలాముఖి-పర్వతం","kn_iso":"jvālāmukhi-parvata","te_iso":"jvālāmukhi-parvataṁ","gloss":"kn: ಆ ಪರ್ವತ ಶಿಖರದ ತುದಿಯಿಂದ ಹೊಗೆ, ಬೂದಿ ಬೆಂಕಿ ಮೊದಲಾದ ಪದಾರ್ಥಗಳು ನೀರಾಗಿ ಆಗಿಂದಾಗೆ ಹೊರಬರುತ್ತದೆ || te: కొండకంటే ఎత్తైన ప్రదేశం","candidate_source":"shared_synset","en_kn":"volcano","en_te":"a place taller than a hill; a mountain"},{"pair_id":"P000018","kn_word":"ಲಕ್ಷದ","te_word":"లక్షవ","kn_iso":"lakṣada","te_iso":"lakṣava","gloss":"kn: ಲಕ್ಷ ರೂಪಾಯಿಗಳ || te: లెక్కింపులో నూరు వేల సంఖ్య","candidate_source":"form_similar","en_kn":"of a lakh (100,000 rupees)","en_te":"lakh; the number 100,000"},{"pair_id":"P000019","kn_word":"ಅಷ್ಟಮೀ","te_word":"అష్టమి","kn_iso":"aṣṭamī","te_iso":"aṣṭami","gloss":"kn: ಚಾಂದ್ರ ಮಾಸದ ಕೃಷ್ಣ ಪಕ್ಷದ ಎಂಟನೇ ತಿಥಿ || te: చంద్రమాసంలో వచ్చే ఎనిమిదవ తిధి","candidate_source":"shared_synset","en_kn":"Ashtami — 8th lunar day","en_te":"Ashtami — 8th lunar day (tithi)"},{"pair_id":"P000020","kn_word":"ವೃಷಭ","te_word":"వృషభరాశి","kn_iso":"vr̥ṣabha","te_iso":"vr̥ṣabharāśi","gloss":"kn: ಜ್ಯೋತಿಷ್ಚಕ್ರದಲ್ಲಿ ಕೊಬ್ಬಿದ ಗೂಳಿಯನ್ನು ಚಿತ್ರವಾಗುಳ್ಳ ಎರಡನೇ ರಾಶಿ || te: రాశులలో రెండవది","candidate_source":"shared_synset","en_kn":"Taurus (2nd zodiac sign, the bull)","en_te":"Taurus (2nd zodiac sign)"},{"pair_id":"P000021","kn_word":"ಪುಷ್ಪಮಾಲೆ","te_word":"పుష్పమాల","kn_iso":"puṣpamāle","te_iso":"puṣpamāla","gloss":"kn: ಹೂವಿನಿಂದ ಕಟ್ಟಿದ ಮಾಲೆ ಅಥವಾ ದಾರದಿಂದ ಪೂಣೀಸಿರುವ ಹೂ || te: పూలను పక్కపక్కాగా కూర్చి కుట్టినది","candidate_source":"shared_synset","en_kn":"flower garland","en_te":"flower garland"},{"pair_id":"P000022","kn_word":"ದಾಕ್ಷಾಯಿಣಿ","te_word":"నీలలోహిత","kn_iso":"dākṣāyiṇi","te_iso":"nīlalōhita","gloss":"kn: ಶಿವನ ಹೆಂಡತಿ || te: శివుడి యొక్క భార్య","candidate_source":"shared_synset","en_kn":"Shiva's wife (Dakshayani)","en_te":"Shiva's wife"},{"pair_id":"P000023","kn_word":"ಪಾರಿತೋಷಕ","te_word":"పారితోషకము","kn_iso":"pāritōṣaka","te_iso":"pāritōṣakamu","gloss":"kn: ಯಾವುದೋ ಕೆಲಸಕ್ಕೆ ನೀಡುವ ಸನ್ಮಾನ ಪೂರ್ವಕವಾಗಿ ನೀಡುವ ಧನ ಅಥವಾ ದ್ರವ್ಯ || te: ఉద్యోగమునుండి విరమించిన తరువాత ఇచ్చు ధనము.","candidate_source":"form_similar","en_kn":"reward / prize for some work","en_te":"gratuity paid on retirement"},{"pair_id":"P000024","kn_word":"ಪುಟ್ಟ","te_word":"పుట్ట","kn_iso":"puṭṭa","te_iso":"puṭṭa","gloss":"kn: ಯಾವುದೋ ಒಂದರ ಆಕಾರ ಚಿಕ್ಕದಾಗಿರುವುದು || te: చెదలు ఉండే పుట్ట","candidate_source":"form_similar","en_kn":"small / little","en_te":"anthill (where termites live)"},{"pair_id":"P000025","kn_word":"ವಿಘ್ನೇಶ್ವರ","te_word":"వజ్రతుండు","kn_iso":"vighnēśvara","te_iso":"vajratuṁḍu","gloss":"kn: ಹಿಂದೂಗಳ ಪ್ರಧಾನ ಮತ್ತು ಅಗ್ರಪೂಜೆಯನ್ನು ಮಾಡುವ ದೇವರು, ಮನುಷ್ಯ ಶರೀರವನ್ನು ಹೊಂದಿದ್ದು ಆನೆಯ ಮುಖವನ್ನು ಹೊಂದಿರುವ ದೆವರು || te: హిందువులకు ప్రధాన అగ్రపూజ్య దేవుడు ఇతని శరీరం మనిషి వలే మరియు తల ఏనుగువలే ఉంటుంది","candidate_source":"shared_synset","en_kn":"Ganesha (elephant-faced Hindu god)","en_te":"Ganesha (elephant-headed Hindu god)"},{"pair_id":"P000026","kn_word":"ವೀರತನ","te_word":"పరాక్రమం","kn_iso":"vīratana","te_iso":"parākramaṁ","gloss":"kn: ವೀರನಾಗಿರುವುದು || te: వీరుడయ్యే స్థితి లేక భావము.","candidate_source":"shared_synset","en_kn":"heroism / valour","en_te":"valour / prowess"},{"pair_id":"P000027","kn_word":"ಸಚ್ಚರಿತ್ರ","te_word":"సచ్చరిత","kn_iso":"saccaritra","te_iso":"saccarita","gloss":"kn: ಒಳ್ಳೆಯ ಗುಣವುಳ್ಳ ಅಥವಾ ಎಲ್ಲರಿಗೂ ಇಷ್ಟವಾಗುವ ಒಳ್ಳೆಯ ನಡತೆಯುಳ್ಳ ಪುರುಷ ಅಥವಾ ಮಹಿಳೆ || te: మంచి లక్షణాలను కలిగివుండటం.","candidate_source":"form_similar","en_kn":"of good character (a person)","en_te":"having good qualities; virtue"},{"pair_id":"P000028","kn_word":"ಅವತರಿಸಿದಂತಹ","te_word":"గుడగుడ","kn_iso":"avatarisidaṁtaha","te_iso":"guḍaguḍa","gloss":"","candidate_source":"random","en_kn":"incarnated / descended (adjectival)","en_te":"gurgling / rumbling sound"},{"pair_id":"P000029","kn_word":"ಗಾಂಧಾರೀ","te_word":"గాంధారీ","kn_iso":"gāṁdhārī","te_iso":"gāṁdhārī","gloss":"kn: ದುರ್ಯೋಧನನ ತಾಯಿ || te: నాలుగు రాగాల తర్వాత వచ్చె రాగం","candidate_source":"form_similar","en_kn":"Gandhari — Duryodhana's mother","en_te":"Gandhari — a musical raga"},{"pair_id":"P000030","kn_word":"ಟೀ","te_word":"టీ","kn_iso":"ṭī","te_iso":"ṭī","gloss":"kn: ಒಂದು ಗಿದ ಅದರ ಎಲೆಗಳನ್ನು ಕುದಿಯು ನೀರಿನಲ್ಲಿ ಹಾಕಿ ಒಂದು ಕುಡಿಯಬಹುದಾದ ಪಾನೀಯ/ಪೇಯವನ್ನು ತಯಾರಿಸಲಾಗುತ್ತದೆ || te: తేయాకులతో చేసే ద్రవ పదార్థం","candidate_source":"form_similar","en_kn":"tea (the beverage)","en_te":"tea (made from tea leaves)"},{"pair_id":"P000031","kn_word":"ನಿರ್ಮಿತ","te_word":"నిర్మాత","kn_iso":"nirmita","te_iso":"nirmāta","gloss":"kn: ಯಾವುದೇ ವಸ್ತು ಸಂಗತಿಗಳು ಪೂರ್ಣವಾಗಿ ರಚನೆಗೊಂಡಿರುವ || te: నిర్మించే లేక తయారు చేసే వ్యక్తి.","candidate_source":"form_similar","en_kn":"constructed / made (a thing)","en_te":"a maker / producer (person)"},{"pair_id":"P000032","kn_word":"ನಿಯಮಿತವಲ್ಲದಂತ","te_word":"అనియమితమైన","kn_iso":"niyamitavalladaṁta","te_iso":"aniyamitamaina","gloss":"kn: ಯಾವುದು ನಿಯಮಿತವಾಗಿಲ್ಲವೋ || te: ఒక క్రమపద్దతిలేనిది","candidate_source":"shared_synset","en_kn":"irregular; not regular","en_te":"irregular; without a set method"},{"pair_id":"P000033","kn_word":"ತಗಲು","te_word":"తగులు","kn_iso":"tagalu","te_iso":"tagulu","gloss":"kn: ಒಂದು ವಸ್ತು ಇನ್ನೊಂದು ವಸ್ತುವನ್ನು ಸ್ಪರ್ಶಿಸು || te: ఒక వస్తువు మరొక వస్తువును స్పర్శించడం","candidate_source":"shared_synset","en_kn":"to touch (one thing touches another)","en_te":"to touch (one thing touches another)"},{"pair_id":"P000034","kn_word":"ಭಾಷಾಂತರಕಾರ","te_word":"భాషాంతరీకరమైన","kn_iso":"bhāṣāṁtarakāra","te_iso":"bhāṣāṁtarīkaramaina","gloss":"kn: ಯಾವುದೇ ಒಂದು ಭಾಷೆಯಿಂದ ಇನ್ನೊಂದು ಭಾಷೆಗೆ ತರ್ಜುಮೆ ಮಾಡುವವ || te: భాషాంతరీకరణ చేయు వ్యక్తి.","candidate_source":"shared_synset","en_kn":"translator (between languages)","en_te":"translator; one who translates"},{"pair_id":"P000035","kn_word":"ಅಭ್ಯರ್ಥಿ","te_word":"అభ్యర్థి","kn_iso":"abhyarthi","te_iso":"abhyarthi","gloss":"kn: ಯಾವುದಾದರು ಪದವಿಗಾಗಿ ಚುನಾವಣೆಗೆ ನಿಂತು ಕೊಳ್ಳುವ ವ್ಯಕ್ತಿ || te: ఎన్నికల సమయంలో  అధికారం కోసం పోటీలో నిలబడే వ్యక్తి","candidate_source":"shared_synset","en_kn":"candidate (standing for election)","en_te":"candidate (contesting an election)"},{"pair_id":"P000036","kn_word":"ರೋಜಾ","te_word":"రోజా","kn_iso":"rōjā","te_iso":"rōjā","gloss":"kn: ಮುಸಲ್ಮಾನ ಧರ್ಮದ ಪ್ರಕಾರ ರಂಜಾನ್ ತಿಂಗಳಲ್ಲಿ ಉಪವಾಸ ಮಾಡುವ ಒಂದು ವಿಧಿ ಅಥವಾ ವ್ರತ || te: ఒక అందమైన పువ్వు ఈ మొక్క ముల్లు కలిగి ఉంటుంది","candidate_source":"form_similar","en_kn":"roza — the Ramadan fast","en_te":"rose (the flower)"},{"pair_id":"P000037","kn_word":"ಕೈಬಾಚಿ","te_word":"చిన్నగొడ్డలి","kn_iso":"kaibāci","te_iso":"cinnagoḍḍali","gloss":"kn: ಮರಗಳನ್ನು ಕೆತ್ತಲು ಅಥವಾ ಚಕ್ಕೆ ಎಬ್ಬಿಸಲು ಬಳಸುವ ಒಂದು ಚಿಕ್ಕ ಸಾಧನ || te: మొక్కలు నరకడానికి కర్రకు తొడిగిన ఇనుప సాధనం","candidate_source":"shared_synset","en_kn":"small axe / adze (for carving wood)","en_te":"small axe / hatchet (for cutting plants)"},{"pair_id":"P000038","kn_word":"ಸ್ತುತಿ","te_word":"ఉపయోగము","kn_iso":"stuti","te_iso":"upayōgamu","gloss":"","candidate_source":"random","en_kn":"praise / eulogy","en_te":"use / utility"},{"pair_id":"P000039","kn_word":"ಹೆಸರಿನವ","te_word":"తిరస్కరించు","kn_iso":"hesarinava","te_iso":"tiraskariṁcu","gloss":"","candidate_source":"random","en_kn":"a renowned person; one of repute","en_te":"to reject / refuse"}];
+const LABELS = ["cognate","false_friend","unrelated","uncertain"];
+const KEY = n => "p110labels:"+n;
+let annot="", idx=0, marks={};
+function save(){ try{ localStorage.setItem(KEY(annot), JSON.stringify({idx,marks})); setSaved("Saved ✓"); }catch(e){ setSaved("Autosave off — export when done"); } }
+function load(name){ try{ const value=localStorage.getItem(KEY(name)); return value?JSON.parse(value):null; }catch(e){ return null; } }
+let saveTimer=null;
+function setSaved(t){ document.getElementById('saveNote').textContent=t; }
+function queueSave(){ clearTimeout(saveTimer); setSaved("saving…"); saveTimer=setTimeout(save,400); }
+function splitGloss(g){ let kn="",te=""; if(g){ g.split("||").forEach(part=>{ const p=part.trim();
+  if(/^kn\s*:/i.test(p)) kn=p.replace(/^kn\s*:/i,"").trim(); else if(/^te\s*:/i.test(p)) te=p.replace(/^te\s*:/i,"").trim(); }); } return {kn,te}; }
+function esc(s){ return s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+function render(){
+  const p=PAIRS[idx];
+  document.getElementById('knWord').textContent=p.kn_word;
+  document.getElementById('teWord').textContent=p.te_word;
+  document.getElementById('knIso').textContent=p.kn_iso||"—";
+  document.getElementById('teIso').textContent=p.te_iso||"—";
+  document.getElementById('knEn').textContent=p.en_kn||"(meaning n/a)";
+  document.getElementById('teEn').textContent=p.en_te||"(meaning n/a)";
+  const g=splitGloss(p.gloss);
+  document.getElementById('knGloss').innerHTML=g.kn?'<span class="tag">ಕನ್ನಡ</span>'+esc(g.kn):'';
+  document.getElementById('teGloss').innerHTML=g.te?'<span class="tag">తెలుగు</span>'+esc(g.te):'';
+  const m=marks[p.pair_id]||{};
+  document.querySelectorAll('.lbtn').forEach(b=>b.classList.toggle('on',b.dataset.l===m.label));
+  const showOrigin=m.label==="cognate";
+  document.getElementById('origin').classList.toggle('show',showOrigin);
+  document.querySelectorAll('.obtn').forEach(b=>b.classList.toggle('on',showOrigin&&b.dataset.o===m.origin));
+  document.getElementById('notes').value=m.notes||"";
+  document.getElementById('excl').checked=!!m.excluded;
+  document.getElementById('pidx').textContent="Pair "+(idx+1)+" of "+PAIRS.length;
+  document.getElementById('prev').disabled=idx===0;
+  document.getElementById('next').disabled=idx===PAIRS.length-1;
+  updateProgress();
+}
+function updateProgress(){
+  const done=PAIRS.filter(p=>{const m=marks[p.pair_id]; return m&&(m.label||m.excluded);}).length;
+  document.getElementById('pcount').textContent=done+" / "+PAIRS.length+" labeled";
+  document.getElementById('pfill').style.width=(100*done/PAIRS.length)+"%";
+  document.getElementById('doneBanner').classList.toggle('show',done===PAIRS.length);
+  const dots=document.getElementById('dots'); dots.innerHTML="";
+  PAIRS.forEach((p,i)=>{ const m=marks[p.pair_id]||{};
+    const b=document.createElement('button');
+    b.className="dot"+((m.label||m.excluded)?" done":"")+(m.excluded?" excl":"")+(i===idx?" cur":"");
+    b.title=(i+1)+". "+p.kn_word+" / "+p.te_word+(m.label?" ["+m.label+"]":"");
+    b.onclick=()=>{idx=i; render();}; dots.appendChild(b); });
+}
+function setLabel(l){ const id=PAIRS[idx].pair_id; marks[id]=marks[id]||{}; marks[id].label=l; if(l!=="cognate") delete marks[id].origin; render(); queueSave(); }
+document.querySelectorAll('.lbtn').forEach(b=> b.onclick=()=>setLabel(b.dataset.l));
+document.querySelectorAll('.obtn').forEach(b=> b.onclick=()=>{ const id=PAIRS[idx].pair_id; marks[id]=marks[id]||{};
+  marks[id].origin=marks[id].origin===b.dataset.o?undefined:b.dataset.o; render(); queueSave(); });
+document.getElementById('notes').addEventListener('input',e=>{ const id=PAIRS[idx].pair_id; marks[id]=marks[id]||{}; marks[id].notes=e.target.value; queueSave(); });
+document.getElementById('excl').addEventListener('change',e=>{ const id=PAIRS[idx].pair_id; marks[id]=marks[id]||{}; marks[id].excluded=e.target.checked; render(); queueSave(); });
+document.getElementById('next').onclick=()=>{ if(idx<PAIRS.length-1){idx++; render(); queueSave();} };
+document.getElementById('prev').onclick=()=>{ if(idx>0){idx--; render(); queueSave();} };
+document.addEventListener('keydown',e=>{
+  if(!overlayHidden) return;
+  const tag=document.activeElement.tagName;
+  if(tag==='INPUT'||tag==='TEXTAREA'){ if(e.key==='Enter'){document.activeElement.blur(); if(idx<PAIRS.length-1){idx++;render();queueSave();}} return; }
+  if(e.key>='1'&&e.key<='4'){ setLabel(LABELS[+e.key-1]); }
+  else if(e.key==='ArrowRight'||e.key==='Enter'){ if(idx<PAIRS.length-1){idx++;render();queueSave();} }
+  else if(e.key==='ArrowLeft'){ if(idx>0){idx--;render();queueSave();} }
+});
+function csvCell(v){ v=(v==null?"":String(v)); return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; }
+function buildCsv(){
+  const cols=["pair_id","kn_word","te_word","kn_iso","te_iso","en_kn","en_te","gloss","candidate_source","label","origin","annotator","notes","excluded"];
+  const lines=[cols.join(",")];
+  PAIRS.forEach(p=>{ const m=marks[p.pair_id]||{};
+    lines.push([p.pair_id,p.kn_word,p.te_word,p.kn_iso,p.te_iso,p.en_kn,p.en_te,p.gloss,p.candidate_source,
+      m.label||"",m.origin||"",annot,m.notes||"",m.excluded?"true":""].map(csvCell).join(",")); });
+  return lines.join("\n");
+}
+function safeName(){ return annot.replace(/[^a-z0-9_-]+/gi,"_").toLowerCase()||"annotator"; }
+document.getElementById('exportBtn').onclick=()=>{ const csv=buildCsv();
+  try{ const blob=new Blob([csv],{type:"text/csv;charset=utf-8"}); const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob); a.download="pilot_labeled_"+safeName()+".csv"; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+  }catch(e){ document.getElementById('showCsv').click(); } };
+document.getElementById('showCsv').onclick=()=>{ const box=document.getElementById('csvbox'); box.style.display='block'; box.value=buildCsv(); box.focus(); box.select(); };
+document.getElementById('reset').onclick=()=>{ if(!confirm("Clear all your labels for this pilot? This can't be undone.")) return;
+  marks={}; idx=0; try{localStorage.removeItem(KEY(annot));}catch(e){} render(); };
+let overlayHidden=false;
+const overlay=document.getElementById('overlay'); const nameIn=document.getElementById('nameIn');
+function checkResume(){ const n=nameIn.value.trim(); const msg=document.getElementById('resumeMsg');
+  if(!n){ msg.textContent=""; return; } const d=load(n);
+  if(d){ const done=Object.values(d.marks||{}).filter(m=>m&&(m.label||m.excluded)).length;
+    msg.textContent="Found saved progress: "+done+" of "+PAIRS.length+" labeled — will resume."; } else msg.textContent=""; }
+nameIn.addEventListener('input',()=>{ clearTimeout(nameIn._t); nameIn._t=setTimeout(checkResume,300); });
+function start(){ const n=nameIn.value.trim(); if(!n){ nameIn.focus(); return; }
+  annot=n; document.getElementById('whoName').textContent=n;
+  const d=load(n); if(d){ marks=d.marks||{}; idx=Math.min(d.idx||0,PAIRS.length-1); }
+  overlay.style.display='none'; overlayHidden=true; render(); }
+document.getElementById('startBtn').onclick=start;
+nameIn.addEventListener('keydown',e=>{ if(e.key==='Enter') start(); });
+document.getElementById('switchBtn').onclick=()=>{ overlay.style.display='flex'; overlayHidden=false; nameIn.value=annot; nameIn.focus(); checkResume(); };
+nameIn.focus();
+</script>
+</body>
+</html>

@@ -341,19 +341,3 @@ def save_cache(cache: MutableMapping[str, float], path: str | Path) -> None:
     p.parent.mkdir(parents=True, exist_ok=True)
     with p.open("w", encoding="utf-8") as f:
         json.dump(dict(cache), f, ensure_ascii=False, indent=0)
-
-
-def phonetic_similarity_cached(
-    a_iso: str,
-    b_iso: str,
-    cache: MutableMapping[str, float],
-    backend: str = "auto",
-) -> float:
-    """Like ``phonetic_similarity``, with an in-memory (optionally on-disk) cache."""
-    chosen = _resolve_backend(backend)
-    key = cache_key(chosen, a_iso, b_iso)
-    if key in cache:
-        return cache[key]
-    score = phonetic_similarity(a_iso, b_iso, backend=chosen)
-    cache[key] = score
-    return score

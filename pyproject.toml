@@ -12,6 +12,8 @@ dependencies = [
   "aksharamukha",
   "pandas",
   "PyYAML",
+  "scikit-learn",
+  "joblib",
 ]
 
 [project.optional-dependencies]
@@ -19,6 +21,8 @@ dev = ["pytest"]
 mt = ["deep-translator", "nltk"]
 phonetic = ["lingpy"]
 semantic = ["sentence-transformers"]
+ml = ["scikit-learn", "joblib"]
+app = ["streamlit>=1.61"]
 
 [tool.setuptools.packages.find]
 where = ["src"]

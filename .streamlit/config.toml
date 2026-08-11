@@ -1,0 +1,18 @@
+[theme]
+primaryColor = "#2B3A67"
+backgroundColor = "#FBF3E1"
+secondaryBackgroundColor = "#F3E6C4"
+textColor = "#2B3A67"
+font = "serif"
+baseRadius = "12px"
+borderColor = "#D4C4A0"
+greenColor = "#4C7A5E"
+redColor = "#C1272D"
+yellowColor = "#D9A62E"
+grayColor = "#6B7280"
+
+[theme.sidebar]
+backgroundColor = "#F3E6C4"
+secondaryBackgroundColor = "#FBF3E1"
+textColor = "#2B3A67"
+borderColor = "#D4C4A0"

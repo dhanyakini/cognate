@@ -94,7 +94,7 @@ def test_generator_reads_csv_and_changes_embedded_value(
 
 
 def test_generated_html_uses_local_storage_only() -> None:
-    html = (ROOT / "label_pairs.html").read_text(encoding="utf-8")
+    html = (ROOT / "artifacts" / "label_pairs.html").read_text(encoding="utf-8")
     assert "window.storage" not in html
     assert "localStorage" in html
 

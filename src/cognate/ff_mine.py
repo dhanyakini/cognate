@@ -230,7 +230,6 @@ def run(
         SCRIPT_TELUGU,
         load_cache,
         save_cache,
-        to_iso_cached,
     )
 
     cfg = load_config(config_path)

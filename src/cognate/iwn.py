@@ -19,7 +19,7 @@ def _import_pyiwn():
 
 
 def load_lang(language) -> object:
-    """Load one IndoWordNet language object."""
+    """Hits the local pyiwn bundle (no network after install)."""
     _, IndoWordNet, _ = _import_pyiwn()
     return IndoWordNet(lang=language)
 
@@ -39,7 +39,7 @@ def synsets_by_id(iwn) -> dict[str, list]:
 
 
 def lemmas(synset) -> list[str]:
-    """Return the surface words in a synset."""
+    """Prefers lemma_names(); falls back to lemmas() for older pyiwn."""
     try:
         return [str(x) for x in synset.lemma_names()]
     except AttributeError:
@@ -82,6 +82,6 @@ def lemma_glosses(iwn) -> dict[str, str]:
 
 
 def language_enum() -> Any:
-    """Return pyiwn.Language (lazy)."""
+    """Import pyiwn only when first needed so CLI modules can load without the data bundle."""
     _, _, Language = _import_pyiwn()
     return Language

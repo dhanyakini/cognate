@@ -9,9 +9,9 @@ gloss. Preserve its uncertainty; flag weak rows for exclusion instead.
 Usage:
     python scripts/build_labeler.py
     python scripts/build_labeler.py --csv data/pilot_glossed.csv \\
-        --template label_pairs.template.html --out label_pairs.html
+        --template label_pairs.template.html --out artifacts/label_pairs.html
     python scripts/build_labeler.py --csv data/batch_glossed.csv \\
-        --out label_pairs_batch.html
+        --out artifacts/label_pairs_batch.html
 """
 
 from __future__ import annotations
@@ -26,7 +26,7 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_CSV = ROOT / "data" / "pilot_glossed.csv"
 DEFAULT_TEMPLATE = ROOT / "label_pairs.template.html"
-DEFAULT_OUT = ROOT / "label_pairs.html"
+DEFAULT_OUT = ROOT / "artifacts" / "label_pairs.html"
 PAIRS_PLACEHOLDER = "__PAIRS_JSON__"
 PAIRS_PATTERN = re.compile(r"const PAIRS = (\[.*?\]);\nconst LABELS", re.DOTALL)
 
@@ -148,15 +148,6 @@ def extract_embedded_pairs(html: str) -> list[dict[str, Any]]:
     if not isinstance(parsed, list):
         raise ValueError("embedded PAIRS value is not a list")
     return parsed
-
-
-def template_from_html(html: str) -> str:
-    """Replace only the current PAIRS JSON with the template placeholder."""
-    match = PAIRS_PATTERN.search(html)
-    if not match:
-        raise ValueError("could not find embedded PAIRS array")
-    start, end = match.span(1)
-    return html[:start] + PAIRS_PLACEHOLDER + html[end:]
 
 
 def main(argv: list[str] | None = None) -> None:

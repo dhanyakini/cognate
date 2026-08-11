@@ -6,4 +6,5 @@ __pycache__/
 dist/
 build/
 data/cache/
+data/candidates/stream_a.csv
 .DS_Store
