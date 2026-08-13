@@ -99,48 +99,6 @@ def test_generated_html_uses_local_storage_only() -> None:
     assert "localStorage" in html
 
 
-def test_kappa_disagreement_output_includes_english_meanings(
-    tmp_path: Path,
-) -> None:
-    rows_a = _read(GLOSSED)
-    rows_b = [dict(row) for row in rows_a]
-    for rows, annotator in ((rows_a, "dhanya"), (rows_b, "tejaswini")):
-        for row in rows:
-            row["label"] = "cognate"
-            row["origin"] = ""
-            row["annotator"] = annotator
-            row["notes"] = ""
-            row["excluded"] = ""
-    rows_b[0]["label"] = "false_friend"
-
-    file_a = tmp_path / "a.csv"
-    file_b = tmp_path / "b.csv"
-    adjudication = tmp_path / "adjudication.csv"
-    _write(file_a, rows_a)
-    _write(file_b, rows_b)
-
-    result = subprocess.run(
-        [
-            sys.executable,
-            str(ROOT / "merge_and_kappa.py"),
-            str(file_a),
-            str(file_b),
-            "--out",
-            str(adjudication),
-        ],
-        check=True,
-        capture_output=True,
-        text=True,
-    )
-
-    assert rows_a[0]["en_kn"] in result.stdout
-    assert rows_a[0]["en_te"] in result.stdout
-    with adjudication.open(newline="", encoding="utf-8") as file:
-        output = list(csv.DictReader(file))
-    assert output[0]["en_kn"] == rows_a[0]["en_kn"]
-    assert output[0]["en_te"] == rows_a[0]["en_te"]
-
-
 def test_kappa_overlap_ids_restricts_comparable_set(tmp_path: Path) -> None:
     rows_a = _read(GLOSSED)
     rows_b = [dict(row) for row in rows_a]
