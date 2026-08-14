@@ -166,17 +166,15 @@ def compare_weighting(model, noweight, test_df: pd.DataFrame, data_dir: Path) ->
           "false-friend\nrecall to zero -- why macro-F1 is the headline metric.")
 
 
-def show_examples(model, gold: pd.DataFrame, test_df: pd.DataFrame) -> None:
-    """Print false-friend test rows using pair_id already on the held-out frame."""
-    print_header("5. EXAMPLE PREDICTIONS (real test pairs)")
-    gold_by_id = gold.set_index("pair_id")
-    shown = test_df.copy()
-    shown["pred"] = predict(model, test_df, FEATURE_COLS)
-
-    ff_rows = shown[shown["label"] == "false_friend"].head(6)
+def _print_example_rows(rows: pd.DataFrame, gold_by_id) -> None:
+    """Print example rows in the shared pair_id / true / pred / orth / sem layout."""
+    if rows.empty:
+        print("(none in this split)")
+        return
     print(f"{'pair_id':<9}{'true':<13}{'pred':<13}"
           f"{'orth':>6}{'sem':>6}  words / glosses")
-    for _, r in ff_rows.iterrows():
+    n_printed = 0
+    for _, r in rows.iterrows():
         pid = r["pair_id"]
         if pid not in gold_by_id.index:
             continue
@@ -188,6 +186,35 @@ def show_examples(model, gold: pd.DataFrame, test_df: pd.DataFrame) -> None:
               f"{r['orth_sim']:>6.2f}{r['sem_sim']:>6.2f}  "
               f"[{mark}] {g.get('kn_word','')}/{g.get('te_word','')} "
               f"= {kn_en!r} vs {te_en!r}")
+        n_printed += 1
+    if n_printed == 0:
+        print("(none in this split)")
+
+
+def show_examples(model, gold: pd.DataFrame, test_df: pd.DataFrame) -> None:
+    """Print three deterministic test groups (catches, cognate→FF errors, unrelated)."""
+    print_header("5. EXAMPLE PREDICTIONS (real test pairs)")
+    gold_by_id = gold.set_index("pair_id")
+    shown = test_df.copy()
+    shown["pred"] = predict(model, test_df, FEATURE_COLS)
+
+    groups = [
+        (
+            "Correct false-friend catches",
+            shown[(shown["label"] == "false_friend") & (shown["pred"] == shown["label"])].head(3),
+        ),
+        (
+            "Dominant error: cognate predicted as false_friend",
+            shown[(shown["label"] == "cognate") & (shown["pred"] == "false_friend")].head(3),
+        ),
+        (
+            "Unrelated (perfect separation)",
+            shown[(shown["label"] == "unrelated") & (shown["pred"] == shown["label"])].head(1),
+        ),
+    ]
+    for title, rows in groups:
+        print(f"\n{title}:")
+        _print_example_rows(rows, gold_by_id)
 
 
 # ---------------------------------------------------------------------------
