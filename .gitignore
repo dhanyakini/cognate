@@ -8,3 +8,9 @@ build/
 data/cache/
 data/candidates/stream_a.csv
 .DS_Store
+
+# Word lock files
+~$*
+
+# Cursor tooling (local only)
+.agents/
