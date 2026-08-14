@@ -22,10 +22,19 @@ from pathlib import Path
 
 import pandas as pd
 
+# Windows consoles default to cp1252, which can't print Kannada/Telugu
+# script; force UTF-8 so the disagreement list doesn't crash on Windows.
+try:
+    sys.stdout.reconfigure(encoding="utf-8")
+    sys.stderr.reconfigure(encoding="utf-8")
+except Exception:
+    pass
+
 LABELS = ["cognate", "false_friend", "unrelated", "uncertain"]
 
 
 def load(path):
+    """Read a labeler-export CSV; must have pair_id + label columns."""
     df = pd.read_csv(path, dtype=str, keep_default_na=False)
     if "pair_id" not in df.columns or "label" not in df.columns:
         sys.exit(f"{path}: expected columns pair_id and label")
@@ -33,16 +42,19 @@ def load(path):
 
 
 def load_overlap_ids(path: str | Path) -> set[str]:
+    """Read the list of pair_ids that both of us labeled (one id per line)."""
     text = Path(path).read_text(encoding="utf-8")
     return {line.strip() for line in text.splitlines() if line.strip()}
 
 
 def annot_name(df, fallback):
+    """Grab the annotator name from the file, or use the fallback if unclear."""
     vals = [v for v in df.get("annotator", pd.Series([], dtype=str)).unique() if v.strip()]
     return vals[0] if len(vals) == 1 else fallback
 
 
 def cohen_kappa(a, b, labels):
+    """Cohen's kappa by hand: (observed - expected agreement) / (1 - expected)."""
     n = len(a)
     if n == 0:
         return float("nan")
@@ -56,6 +68,7 @@ def cohen_kappa(a, b, labels):
 
 
 def confusion(a, b, labels):
+    """Build the confusion matrix of A's labels vs B's labels."""
     idx = {c: i for i, c in enumerate(labels)}
     m = [[0] * len(labels) for _ in labels]
     for x, y in zip(a, b):
@@ -65,6 +78,7 @@ def confusion(a, b, labels):
 
 
 def report(a, b, labels, title):
+    """Print agreement %, kappa, and the confusion matrix for one comparison."""
     n = len(a)
     if n == 0:
         print(f"\n{title}: no comparable rows.")
@@ -83,6 +97,7 @@ def report(a, b, labels, title):
 
 
 def kappa_reading(k):
+    """Turn a kappa number into the usual word (slight/fair/moderate/...)."""
     if k != k:
         return "n/a"
     if k < 0.20:
@@ -97,6 +112,7 @@ def kappa_reading(k):
 
 
 def main(argv: list[str] | None = None):
+    """CLI: compare two label files and write the adjudication worksheet."""
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("file_a")
     ap.add_argument("file_b")
