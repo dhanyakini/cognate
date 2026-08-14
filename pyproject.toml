@@ -12,7 +12,7 @@ dependencies = [
   "aksharamukha",
   "pandas",
   "PyYAML",
-  "scikit-learn",
+  "scikit-learn>=1.9,<1.10",
   "joblib",
 ]
 
