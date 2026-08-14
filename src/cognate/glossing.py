@@ -80,7 +80,7 @@ def translate_to_english(text: str) -> str | None:
     if os.environ.get("COGNATE_MT", "").strip() not in {"1", "true", "TRUE", "yes"}:
         return None
     try:
-        from deep_translator import GoogleTranslator
+        from deep_translator import GoogleTranslator  # pyright: ignore[reportMissingImports]
     except Exception:
         return None
     try:
